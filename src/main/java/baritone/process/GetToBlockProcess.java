@@ -54,7 +54,7 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
 
     @Override
     public void getToBlock(BlockOptionalMeta block) {
-        onLostControl();
+        release();
         gettingTo = block;
         start = ctx.playerFeet();
         blacklist = new ArrayList<>();
@@ -88,7 +88,7 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
             }
             logDirect("No known locations of " + gettingTo + ", canceling GetToBlock");
             if (isSafeToCancel) {
-                onLostControl();
+                release();
             }
             return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
         }
@@ -101,7 +101,7 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
             } else {
                 logDirect("Unable to find any path to " + gettingTo + ", canceling GetToBlock");
                 if (isSafeToCancel) {
-                    onLostControl();
+                    release();
                 }
                 return new PathingCommand(goal, PathingCommandType.CANCEL_AND_SET_GOAL);
             }
@@ -116,11 +116,11 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
             // we're there
             if (rightClickOnArrival(gettingTo.getBlock())) {
                 if (rightClick()) {
-                    onLostControl();
+                    release();
                     return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
             } else {
-                onLostControl();
+                release();
                 return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
             }
         }
@@ -177,7 +177,7 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
     }
 
     @Override
-    public synchronized void onLostControl() {
+    public synchronized void release() {
         gettingTo = null;
         knownLocations = null;
         start = null;

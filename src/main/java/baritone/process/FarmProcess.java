@@ -343,7 +343,7 @@ public final class FarmProcess extends BaritoneProcessHelper implements IFarmPro
             if (Baritone.settings().notificationOnFarmFail.value) {
                 logNotification("Farm failed", true);
             }
-            onLostControl();
+            release();
             return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
         }
 
@@ -389,14 +389,14 @@ public final class FarmProcess extends BaritoneProcessHelper implements IFarmPro
             if (Baritone.settings().notificationOnFarmFail.value) {
                 logNotification("Farm failed", true);
             }
-            onLostControl();
+            release();
             return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
         }
         return new PathingCommand(new GoalComposite(goalz.toArray(new Goal[0])), PathingCommandType.SET_GOAL_AND_PATH);
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         active = false;
     }
 

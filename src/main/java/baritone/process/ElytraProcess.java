@@ -70,7 +70,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
     private boolean predictingTerrain;
 
     @Override
-    public void onLostControl() {
+    public void release() {
         this.state = State.START_FLYING; // TODO: null state?
         this.goingToLandingSpot = false;
         this.landingSpot = null;
@@ -98,7 +98,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
     @Override
     public void resetState() {
         BlockPos destination = this.currentDestination();
-        this.onLostControl();
+        this.release();
         if (destination != null) {
             this.pathTo(destination);
             this.repackChunks();
@@ -123,7 +123,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
         this.behavior.onTick();
 
         if (calcFailed) {
-            onLostControl();
+            release();
             logDirect(AUTO_JUMP_FAILURE_MSG);
             return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
         }
@@ -156,7 +156,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
                 }
                 if (Baritone.settings().disconnectOnArrival.value && !reachedGoal) {
                     // don't be active when the user logs back in
-                    this.onLostControl();
+                    this.release();
                     ctx.world().disconnect();
                     return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
@@ -199,7 +199,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
             }
             logDirect("Done :)");
             baritone.getInputOverrideHandler().clearAllKeys();
-            this.onLostControl();
+            this.release();
             return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
         }
 
@@ -212,7 +212,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
         if (this.state == State.LOCATE_JUMP) {
             if (shouldLandForSafety()) {
                 logDirect("Not taking off, because elytra durability or fireworks are so low that I would immediately emergency land anyway.");
-                onLostControl();
+                release();
                 return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
             }
             if (this.goal == null) {
@@ -235,11 +235,11 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
                             this.state = State.GET_TO_JUMP;
                             return;
                         }
-                        onLostControl();
+                        release();
                     });
                     this.state = State.PAUSE;
                 } else {
-                    onLostControl();
+                    release();
                     logDirect(AUTO_JUMP_FAILURE_MSG);
                     return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
@@ -325,7 +325,7 @@ public class ElytraProcess extends BaritoneProcessHelper implements IBaritonePro
         if (ctx.player() == null || ctx.player().level().dimension() != Level.NETHER) {
             return;
         }
-        this.onLostControl();
+        this.release();
         this.predictingTerrain = Baritone.settings().elytraPredictTerrain.value;
         this.behavior = new ElytraBehavior(this.baritone, this, destination, appendDestination);
         if (ctx.world() != null) {

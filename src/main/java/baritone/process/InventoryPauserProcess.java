@@ -69,7 +69,7 @@ public class InventoryPauserProcess extends BaritoneProcessHelper {
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
 
     }
 

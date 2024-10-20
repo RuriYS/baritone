@@ -45,7 +45,6 @@ import baritone.utils.schematic.SchematicSystem;
 import baritone.utils.schematic.format.defaults.LitematicaSchematic;
 import baritone.utils.schematic.litematica.LitematicaHelper;
 import baritone.utils.schematic.schematica.SchematicaHelper;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
@@ -526,7 +525,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
                 if (Baritone.settings().notificationOnBuildFinished.value) {
                     logNotification("Done building", false);
                 }
-                onLostControl();
+                release();
                 return null;
             }
             // build repeat time
@@ -977,7 +976,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         incorrectPositions = null;
         name = null;
         schematic = null;

@@ -165,7 +165,7 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         mine(0, (BlockOptionalMetaLookup) null);
     }
 

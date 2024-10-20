@@ -39,7 +39,7 @@ public interface ICustomGoalProcess extends IBaritoneProcess {
     Goal getGoal();
 
     /**
-     * @return The most recent set goal, which doesn't invalidate upon {@link #onLostControl()}
+     * @return The most recent set goal, which doesn't invalidate upon {@link #release()}
      */
     Goal mostRecentGoal();
 

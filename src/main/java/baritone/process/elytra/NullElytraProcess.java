@@ -69,7 +69,7 @@ public final class NullElytraProcess extends BaritoneProcessHelper implements IE
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
 
     }
 

@@ -56,7 +56,7 @@ public class PathingControlManager implements IPathingControlManager {
 
     @Override
     public void registerProcess(IBaritoneProcess process) {
-        process.onLostControl(); // make sure it's reset
+        process.release(); // make sure it's reset
         processes.add(process);
     }
 
@@ -66,7 +66,7 @@ public class PathingControlManager implements IPathingControlManager {
         command = null;
         active.clear();
         for (IBaritoneProcess proc : processes) {
-            proc.onLostControl();
+            proc.release();
             if (proc.isActive() && !proc.isTemporary()) { // it's okay only for a temporary thing (like combat pause) to maintain control even if you say to cancel
                 throw new IllegalStateException(proc.displayName());
             }
@@ -205,7 +205,7 @@ public class PathingControlManager implements IPathingControlManager {
             } else if (exec.commandType != PathingCommandType.DEFER) {
                 inControlThisTick = proc;
                 if (!proc.isTemporary()) {
-                    iterator.forEachRemaining(IBaritoneProcess::onLostControl);
+                    iterator.forEachRemaining(IBaritoneProcess::release);
                 }
                 return exec;
             }

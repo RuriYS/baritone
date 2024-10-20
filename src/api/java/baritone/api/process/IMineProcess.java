@@ -111,6 +111,6 @@ public interface IMineProcess extends IBaritoneProcess {
      * Cancels the current mining task
      */
     default void cancel() {
-        onLostControl();
+        release();
     }
 }

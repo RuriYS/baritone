@@ -45,6 +45,6 @@ public interface IFollowProcess extends IBaritoneProcess {
      * Cancels the follow behavior, this will clear the current follow target.
      */
     default void cancel() {
-        onLostControl();
+        release();
     }
 }

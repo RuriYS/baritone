@@ -97,7 +97,7 @@ public final class FollowProcess extends BaritoneProcessHelper implements IFollo
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         filter = null;
         cache = null;
     }

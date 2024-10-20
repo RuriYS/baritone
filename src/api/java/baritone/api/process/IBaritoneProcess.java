@@ -68,7 +68,7 @@ public interface IBaritoneProcess {
     /**
      * Returns whether or not this process should be treated as "temporary".
      * <p>
-     * If a process is temporary, it doesn't call {@link #onLostControl} on the processes that aren't execute because of it.
+     * If a process is temporary, it doesn't call {@link #release} on the processes that aren't execute because of it.
      * <p>
      * For example, {@code CombatPauserProcess} and {@code PauseForAutoEatProcess} should return {@code true} always,
      * and should return {@link #isActive} {@code true} only if there's something in range this tick, or if the player would like
@@ -80,11 +80,12 @@ public interface IBaritoneProcess {
     boolean isTemporary();
 
     /**
+     * Releases controls.
      * Called if {@link #isActive} returned {@code true}, but another non-temporary
      * process has control. Effectively the same as cancel. You want control but you
      * don't get it.
      */
-    void onLostControl();
+    void release();
 
     /**
      * Used to determine which Process gains control if multiple are reporting {@link #isActive()}. The one

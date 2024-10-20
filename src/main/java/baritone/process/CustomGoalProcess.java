@@ -37,7 +37,7 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
     private Goal goal;
 
     /**
-     * The most recent goal. Not invalidated upon {@link #onLostControl()}
+     * The most recent goal. Not invalidated upon {@link #release()}
      */
     private Goal mostRecentGoal;
 
@@ -99,11 +99,11 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
                 return ret;
             case EXECUTING:
                 if (calcFailed) {
-                    onLostControl();
+                    release();
                     return new PathingCommand(this.goal, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
                 if (this.goal == null || (this.goal.isInGoal(ctx.playerFeet()) && this.goal.isInGoal(baritone.getPathingBehavior().pathStart()))) {
-                    onLostControl(); // we're there xd
+                    release(); // we're there xd
                     if (Baritone.settings().disconnectOnArrival.value) {
                         ctx.world().disconnect();
                     }
@@ -119,9 +119,10 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         this.state = State.NONE;
         this.goal = null;
+        logDirect("Goal done");
     }
 
     @Override

@@ -66,7 +66,7 @@ public class ExecutionControlCommands {
                     }
 
                     @Override
-                    public void onLostControl() {
+                    public void release() {
                     }
 
                     @Override

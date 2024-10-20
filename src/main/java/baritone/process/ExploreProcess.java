@@ -85,7 +85,7 @@ public final class ExploreProcess extends BaritoneProcessHelper implements IExpl
             if (Baritone.settings().notificationOnExploreFinished.value) {
                 logNotification("Exploration failed", true);
             }
-            onLostControl();
+            release();
             return null;
         }
         IChunkFilter filter = calcFilter();
@@ -94,7 +94,7 @@ public final class ExploreProcess extends BaritoneProcessHelper implements IExpl
             if (Baritone.settings().notificationOnExploreFinished.value) {
                 logNotification("Explored all chunks", false);
             }
-            onLostControl();
+            release();
             return null;
         }
         Goal[] closestUncached = closestUncachedChunks(explorationOrigin, filter);
@@ -288,7 +288,7 @@ public final class ExploreProcess extends BaritoneProcessHelper implements IExpl
     }
 
     @Override
-    public void onLostControl() {
+    public void release() {
         explorationOrigin = null;
     }
 
