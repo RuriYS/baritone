@@ -122,7 +122,6 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
     public void release() {
         this.state = State.NONE;
         this.goal = null;
-        logDirect("Goal done");
     }
 
     @Override
