@@ -56,11 +56,11 @@ public final class InputOverrideHandler extends Behavior implements IInputOverri
      * Returns whether or not we are forcing down the specified {@link Input}.
      *
      * @param input The input
-     * @return Whether or not it is being forced down
+     * @return {@code boolean} Whether or not it is being forced down
      */
     @Override
-    public final boolean isInputForcedDown(Input input) {
-        return input == null ? false : this.inputForceStateMap.getOrDefault(input, false);
+    public boolean isInputForcedDown(Input input) {
+        return input != null && this.inputForceStateMap.getOrDefault(input, false);
     }
 
     /**

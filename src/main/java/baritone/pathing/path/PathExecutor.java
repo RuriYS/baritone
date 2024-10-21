@@ -46,7 +46,6 @@ import static baritone.api.pathing.movement.MovementStatus.*;
  * @author leijurv
  */
 public class PathExecutor implements IPathExecutor, Helper {
-
     private static final double MAX_MAX_DIST_FROM_PATH = 3;
     private static final double MAX_DIST_FROM_PATH = 2;
 
@@ -94,7 +93,7 @@ public class PathExecutor implements IPathExecutor, Helper {
             pathPosition++;
         }
         if (pathPosition >= path.length()) {
-            return true; // stop bugging me, I'm done
+            return true;
         }
         Movement movement = (Movement) path.movements().get(pathPosition);
         BetterBlockPos whereAmI = ctx.playerFeet();
@@ -142,7 +141,6 @@ public class PathExecutor implements IPathExecutor, Helper {
             cancel();
             return false;
         }
-        //long start = System.nanoTime() / 1000000L;
         BlockStateInterface bsi = new BlockStateInterface(ctx);
         for (int i = pathPosition - 10; i < pathPosition + 10; i++) {
             if (i < 0 || i >= path.movements().size()) {
@@ -178,10 +176,6 @@ public class PathExecutor implements IPathExecutor, Helper {
             toWalkInto = newWalkInto;
             recalcBP = false;
         }
-        /*long end = System.nanoTime() / 1000000L;
-        if (end - start > 0) {
-            System.out.println("Recalculating break and place took " + (end - start) + "ms");
-        }*/
         if (pathPosition < path.movements().size() - 1) {
             IMovement next = path.movements().get(pathPosition + 1);
             if (!behavior.baritone.bsi.worldContainsLoadedChunk(next.getDest().x, next.getDest().z)) {

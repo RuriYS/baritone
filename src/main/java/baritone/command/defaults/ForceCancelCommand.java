@@ -37,7 +37,7 @@ public class ForceCancelCommand extends Command {
     public void execute(String label, IArgConsumer args) throws CommandException {
         args.requireMax(0);
         IPathingBehavior pathingBehavior = baritone.getPathingBehavior();
-        pathingBehavior.cancelEverything();
+        pathingBehavior.terminate();
         pathingBehavior.forceCancel();
         logDirect("ok force canceled");
     }

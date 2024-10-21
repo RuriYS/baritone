@@ -113,7 +113,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     }
 
     @Override
-    public Goal getDestination() {
+    public Goal getCurrentGoal() {
         return pathManager.getGoal();
     }
 
@@ -371,13 +371,12 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     }
 
     @Override
-    public boolean cancelEverything() {
+    public void terminate() {
         boolean doIt = isSafeToCancel();
         if (doIt) {
             secretInternalSegmentCancel();
         }
         baritone.getPathingControlManager().terminateAllProcesses();
-        return doIt;
     }
 
     public boolean calcFailedLastTick() { // NOT exposed on public api
@@ -411,7 +410,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     @Override
     public void forceCancel() { // exposed on public api because :sob:
-        cancelEverything();
+        terminate();
         secretInternalSegmentCancel();
         synchronized (pathManager.getPathCalculationLock()) {
             pathManager.setActivePathCalculation(null);

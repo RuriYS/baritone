@@ -79,7 +79,7 @@ public final class PathRenderer implements IRenderer {
         }
 
         final float partialTicks = event.getPartialTicks();
-        final Goal goal = behavior.getDestination();
+        final Goal goal = behavior.getCurrentGoal();
 
         final DimensionType thisPlayerDimension = ctx.world().dimensionType();
         final DimensionType currentRenderViewDimension = BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext().world().dimensionType();

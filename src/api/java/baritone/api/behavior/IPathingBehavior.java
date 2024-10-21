@@ -70,7 +70,7 @@ public interface IPathingBehavior extends IBehavior {
     /**
      * @return The current pathing goal
      */
-    Goal getDestination();
+    Goal getCurrentGoal();
 
     /**
      * @return Whether or not a path is currently being executed. This will be false if there's currently a pause.
@@ -91,11 +91,8 @@ public interface IPathingBehavior extends IBehavior {
      * Cancels the pathing behavior or the current path calculation, and all processes that could be controlling path.
      * <p>
      * Basically, "MAKE IT STOP".
-     *
-     * @return Whether or not the pathing behavior was canceled. All processes are guaranteed to be canceled, but the
-     * PathingBehavior might be in the middle of an uncancelable action like a parkour jump
      */
-    boolean cancelEverything();
+    void terminate();
 
     /**
      * PLEASE never call this

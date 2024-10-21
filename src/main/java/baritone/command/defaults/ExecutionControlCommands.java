@@ -179,7 +179,7 @@ public class ExecutionControlCommands {
                 if (paused[0]) {
                     paused[0] = false;
                 }
-                baritone.getPathingBehavior().cancelEverything();
+                baritone.getPathingBehavior().terminate();
                 logDirect("ok canceled");
             }
 
