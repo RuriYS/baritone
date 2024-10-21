@@ -114,7 +114,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     @Override
     public Goal getDestination() {
-        return pathManager.getDestination();
+        return pathManager.getGoal();
     }
 
     @Override
@@ -237,11 +237,11 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     }
 
     private boolean hasReachedDestination() {
-        return pathManager.getDestination() == null || pathManager.getDestination().isInGoal(ctx.playerFeet());
+        return pathManager.getGoal() == null || pathManager.getGoal().isInGoal(ctx.playerFeet());
     }
 
     private void handleDestinationReached() {
-        logDebug("All done. At " + pathManager.getDestination());
+        logDebug("All done. At " + pathManager.getGoal());
         queuePathEvent(PathEvent.AT_GOAL);
         pathManager.setNextPlannedPath(null);
         pathManager.setCurrentPath(null);
@@ -317,13 +317,13 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     private boolean shouldStartPlanningAhead() {
         return pathManager.getActivePathCalculation() == null &&
                 pathManager.getNextPlannedPath() == null &&
-                pathManager.getDestination() != null &&
-                !pathManager.getDestination().isInGoal(pathManager.getCurrentPath().getPath().getDest()) &&
+                pathManager.getGoal() != null &&
+                !pathManager.getGoal().isInGoal(pathManager.getCurrentPath().getPath().getDest()) &&
                 ticksRemainingInSegment(false).get() < Baritone.settings().planningTickLookahead.value;
     }
 
     public void secretInternalSetGoal(Goal goal) {
-        pathManager.setDestination(goal);
+        pathManager.setGoal(goal);
     }
 
     public void secretInternalSetGoalAndPath(PathingCommand command) {
@@ -333,10 +333,10 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         } else {
             calculationContext = new CalculationContext(baritone, true);
         }
-        if (pathManager.getDestination() == null) {
+        if (pathManager.getGoal() == null) {
             return;
         }
-        if (pathManager.getDestination().isInGoal(ctx.playerFeet()) || pathManager.getDestination().isInGoal(pathManager.getExpectedPathStart())) {
+        if (pathManager.getGoal().isInGoal(ctx.playerFeet()) || pathManager.getGoal().isInGoal(pathManager.getExpectedPathStart())) {
             return;
         }
         synchronized (pathManager.getPathLock()) {
@@ -424,22 +424,22 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     public Optional<Double> estimatedTicksToGoal() {
         BetterBlockPos currentPos = ctx.playerFeet();
-        if (pathManager.getDestination() == null || currentPos == null || initialPosition == null) {
+        if (pathManager.getGoal() == null || currentPos == null || initialPosition == null) {
             return Optional.empty();
         }
-        if (pathManager.getDestination().isInGoal(ctx.playerFeet())) {
+        if (pathManager.getGoal().isInGoal(ctx.playerFeet())) {
             resetEstimatedTicksToGoal();
             return Optional.of(0.0);
         }
         if (elapsedTicks == 0) {
             return Optional.empty();
         }
-        double current = pathManager.getDestination().heuristic(currentPos.x, currentPos.y, currentPos.z);
-        double start = pathManager.getDestination().heuristic(initialPosition.x, initialPosition.y, initialPosition.z);
+        double current = pathManager.getGoal().heuristic(currentPos.x, currentPos.y, currentPos.z);
+        double start = pathManager.getGoal().heuristic(initialPosition.x, initialPosition.y, initialPosition.z);
         if (current == start) {
             return Optional.empty();
         }
-        double eta = Math.abs(current - pathManager.getDestination().heuristic()) * elapsedTicks / Math.abs(start - current);
+        double eta = Math.abs(current - pathManager.getGoal().heuristic()) * elapsedTicks / Math.abs(start - current);
         return Optional.of(eta);
     }
 

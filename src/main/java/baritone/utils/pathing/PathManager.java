@@ -21,6 +21,7 @@ import baritone.Baritone;
 import baritone.api.event.events.PathEvent;
 import baritone.api.pathing.goals.Goal;
 import baritone.api.utils.BetterBlockPos;
+import baritone.api.utils.Helper;
 import baritone.api.utils.PathCalculationResult;
 import baritone.behavior.PathingBehavior;
 import baritone.pathing.calc.AbstractNodeCostSearch;
@@ -36,7 +37,7 @@ import static baritone.behavior.PathingBehavior.createPathfinder;
 /**
  * Manages pathfinding calculations in separate threads
  */
-public class PathManager {
+public class PathManager implements Helper  {
     private final PathingBehavior pathingBehavior;
     private final Object pathCalculationLock = new Object();
     private final Object pathLock = new Object();
@@ -46,7 +47,7 @@ public class PathManager {
     private PathExecutor currentPath;
     private PathExecutor nextPlannedPath;
     private BetterBlockPos expectedPathStart;
-    private Goal destination;
+    private Goal goal;
 
     public PathManager(PathingBehavior pathingBehavior) {
         this.pathingBehavior = pathingBehavior;
@@ -63,9 +64,9 @@ public class PathManager {
     public void startNewPathCalculation(final BlockPos start, final boolean log, CalculationContext context) {
         validateCalculationRequest(context);
 
-        Goal goal = this.destination;
+        Goal goal = this.goal;
         if (goal == null) {
-            pathingBehavior.logDebug("no goal");
+            logDebug("No goal");
             return;
         }
 
@@ -111,7 +112,7 @@ public class PathManager {
         );
 
         if (!Objects.equals(pathfinder.getGoal(), goal)) {
-            pathingBehavior.logDebug("Simplifying " + goal.getClass() + " to GoalXZ due to distance");
+            logDebug("Simplifying " + goal.getClass() + " to GoalXZ due to distance");
         }
 
         activePathCalculation = pathfinder;
@@ -119,10 +120,10 @@ public class PathManager {
     }
 
     private void executePathfinding(BlockPos start, Goal goal, AbstractNodeCostSearch pathfinder,
-                                    boolean talkAboutIt, TimeoutPair timeouts) {
+                                    boolean log, TimeoutPair timeouts) {
         Baritone.getExecutor().execute(() -> {
-            if (talkAboutIt) {
-                pathingBehavior.logDebug("Starting to search for path from " + start + " to " + goal);
+            if (log) {
+                logDebug("Starting to search for path from " + start + " to " + goal);
             }
 
             PathCalculationResult calcResult = pathfinder.calculate(
@@ -130,12 +131,12 @@ public class PathManager {
                     timeouts.failureTimeout
             );
 
-            handleCalculationResult(calcResult, start, goal, talkAboutIt);
+            handleCalculationResult(calcResult, start, goal, log);
         });
     }
 
     private void handleCalculationResult(PathCalculationResult calcResult, BlockPos start,
-                                         Goal goal, boolean talkAboutIt) {
+                                         Goal goal, boolean log) {
         synchronized (pathLock) {
             Optional<PathExecutor> executor = calcResult.getPath()
                     .map(p -> new PathExecutor(pathingBehavior, p));
@@ -146,7 +147,7 @@ public class PathManager {
                 handleNextSegmentResult(executor);
             }
 
-            logCalculationOutcome(talkAboutIt, goal, start);
+            logCalculationOutcome(log, goal, start);
 
             synchronized (pathCalculationLock) {
                 activePathCalculation = null;
@@ -163,7 +164,7 @@ public class PathManager {
                 currentPath = executor.get();
                 pathingBehavior.resetEstimatedTicksToGoal(BetterBlockPos.from(start));
             } else {
-                pathingBehavior.logDebug("Warning: discarding orphan path segment with incorrect start. Expected: "
+                logDebug("Warning: discarding orphan path segment with incorrect start. Expected: "
                         + expectedPathStart + ", Got: " + pathStart);
             }
         } else if (calcResult.getType() != PathCalculationResult.Type.CANCELLATION
@@ -179,7 +180,7 @@ public class PathManager {
                     pathingBehavior.queuePathEvent(PathEvent.NEXT_SEGMENT_CALC_FINISHED);
                     nextPlannedPath = executor.get();
                 } else {
-                    pathingBehavior.logDebug("Warning: discarding orphan next segment with incorrect start");
+                    logDebug("Warning: discarding orphan next segment with incorrect start");
                 }
             } else {
                 pathingBehavior.queuePathEvent(PathEvent.NEXT_CALC_FAILED);
@@ -214,13 +215,13 @@ public class PathManager {
         }
     }
 
-    private void logCalculationOutcome(boolean talkAboutIt, Goal goal, BlockPos start) {
-        if (talkAboutIt && currentPath != null && currentPath.getPath() != null) {
+    private void logCalculationOutcome(boolean log, Goal goal, BlockPos start) {
+        if (log && currentPath != null && currentPath.getPath() != null) {
             String message = goal.isInGoal(currentPath.getPath().getDest())
                     ? "Finished finding a path"
                     : "Found path segment";
 
-            pathingBehavior.logDebug(String.format("%s from %s to %s. %d nodes considered",
+            logDebug(String.format("%s from %s to %s. %d nodes considered",
                     message, start, goal, currentPath.getPath().getNumNodesConsidered()));
         }
     }
@@ -256,12 +257,12 @@ public class PathManager {
         return expectedPathStart;
     }
 
-    public Goal getDestination() {
-        return destination;
+    public Goal getGoal() {
+        return goal;
     }
 
-    public void setDestination(Goal destination) {
-        this.destination = destination;
+    public void setGoal(Goal goal) {
+        this.goal = goal;
     }
 
     public void setExpectedPathStart(BetterBlockPos start) {
