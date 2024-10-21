@@ -34,21 +34,22 @@ import java.util.*;
 public class PathingControlManager implements IPathingControlManager {
 
     private final Baritone baritone;
-    private final HashSet<IBaritoneProcess> processes; // unGh
-    private final List<IBaritoneProcess> active;
-    private IBaritoneProcess inControlLastTick;
-    private IBaritoneProcess inControlThisTick;
-    private PathingCommand command;
+    private final HashSet<IBaritoneProcess> registeredProcesses;
+    private final List<IBaritoneProcess> activeProcesses;
+    private IBaritoneProcess previousControllingProcess;
+    private IBaritoneProcess currentControllingProcess;
+    private PathingCommand currentCommand;
 
     public PathingControlManager(Baritone baritone) {
         this.baritone = baritone;
-        this.processes = new HashSet<>();
-        this.active = new ArrayList<>();
-        baritone.getGameEventHandler().registerEventListener(new AbstractGameEventListener() { // needs to be after all behavior ticks
+        this.registeredProcesses = new HashSet<>();
+        this.activeProcesses = new ArrayList<>();
+
+        baritone.getGameEventHandler().registerEventListener(new AbstractGameEventListener() {
             @Override
             public void onTick(TickEvent event) {
                 if (event.getType() == TickEvent.Type.IN) {
-                    postTick();
+                    handlePostTickProcessing();
                 }
             }
         });
@@ -56,160 +57,176 @@ public class PathingControlManager implements IPathingControlManager {
 
     @Override
     public void registerProcess(IBaritoneProcess process) {
-        process.release(); // make sure it's reset
-        processes.add(process);
+        process.release(); // Reset the process state
+        registeredProcesses.add(process);
     }
 
-    public void cancelEverything() { // called by PathingBehavior on TickEvent Type OUT
-        inControlLastTick = null;
-        inControlThisTick = null;
-        command = null;
-        active.clear();
-        for (IBaritoneProcess proc : processes) {
-            proc.release();
-            if (proc.isActive() && !proc.isTemporary()) { // it's okay only for a temporary thing (like combat pause) to maintain control even if you say to cancel
-                throw new IllegalStateException(proc.displayName());
+    public void terminateAllProcesses() {
+        previousControllingProcess = null;
+        currentControllingProcess = null;
+        currentCommand = null;
+        activeProcesses.clear();
+
+        for (IBaritoneProcess process : registeredProcesses) {
+            process.release();
+            if (process.isActive() && !process.isTemporary()) {
+                throw new IllegalStateException(process.displayName());
             }
         }
     }
 
     @Override
     public Optional<IBaritoneProcess> mostRecentInControl() {
-        return Optional.ofNullable(inControlThisTick);
+        return Optional.ofNullable(currentControllingProcess);
     }
 
     @Override
     public Optional<PathingCommand> mostRecentCommand() {
-        return Optional.ofNullable(command);
+        return Optional.ofNullable(currentCommand);
     }
 
-    public void preTick() {
-        inControlLastTick = inControlThisTick;
-        inControlThisTick = null;
-        PathingBehavior p = baritone.getPathingBehavior();
-        command = executeProcesses();
-        if (command == null) {
-            p.cancelSegmentIfSafe();
-            p.secretInternalSetGoal(null);
+    public void handlePreTickProcessing() {
+        previousControllingProcess = currentControllingProcess;
+        currentControllingProcess = null;
+        PathingBehavior pathingBehavior = baritone.getPathingBehavior();
+
+        currentCommand = executeProcessQueue();
+        if (currentCommand == null) {
+            pathingBehavior.cancelSegmentIfSafe();
+            pathingBehavior.secretInternalSetGoal(null);
             return;
         }
-        if (!Objects.equals(inControlThisTick, inControlLastTick) && command.commandType != PathingCommandType.REQUEST_PAUSE && inControlLastTick != null && !inControlLastTick.isTemporary()) {
-            // if control has changed from a real process to another real process, and the new process wants to do something
-            p.cancelSegmentIfSafe();
-            // get rid of the in progress stuff from the last process
+
+        // Handle process control changes
+        if (!Objects.equals(currentControllingProcess, previousControllingProcess) &&
+                currentCommand.commandType != PathingCommandType.REQUEST_PAUSE &&
+                previousControllingProcess != null &&
+                !previousControllingProcess.isTemporary()) {
+            pathingBehavior.cancelSegmentIfSafe();
         }
+
+        executePathingCommand(pathingBehavior, currentCommand);
+    }
+
+    private void executePathingCommand(PathingBehavior pathingBehavior, PathingCommand command) {
         switch (command.commandType) {
             case SET_GOAL_AND_PAUSE:
-                p.secretInternalSetGoalAndPath(command);
+                pathingBehavior.secretInternalSetGoalAndPath(command);
+                pathingBehavior.requestPause();
+                break;
             case REQUEST_PAUSE:
-                p.requestPause();
+                pathingBehavior.requestPause();
                 break;
             case CANCEL_AND_SET_GOAL:
-                p.secretInternalSetGoal(command.goal);
-                p.cancelSegmentIfSafe();
+                pathingBehavior.secretInternalSetGoal(command.goal);
+                pathingBehavior.cancelSegmentIfSafe();
                 break;
             case FORCE_REVALIDATE_GOAL_AND_PATH:
             case REVALIDATE_GOAL_AND_PATH:
-                if (!p.isPathing() && !p.getInProgress().isPresent()) {
-                    p.secretInternalSetGoalAndPath(command);
+                if (!pathingBehavior.isPathing() && !pathingBehavior.getActivePathCalculation().isPresent()) {
+                    pathingBehavior.secretInternalSetGoalAndPath(command);
                 }
                 break;
             case SET_GOAL_AND_PATH:
-                // now this i can do
                 if (command.goal != null) {
-                    p.secretInternalSetGoalAndPath(command);
+                    pathingBehavior.secretInternalSetGoalAndPath(command);
                 }
                 break;
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("Unknown command type: " + command.commandType);
         }
     }
 
-    private void postTick() {
-        // if we did this in pretick, it would suck
-        // we use the time between ticks as calculation time
-        // therefore, we only cancel and recalculate after the tick for the current path has executed
-        // "it would suck" means it would actually execute a path every other tick
-        if (command == null) {
+    private void handlePostTickProcessing() {
+        if (currentCommand == null) {
             return;
         }
-        PathingBehavior p = baritone.getPathingBehavior();
-        switch (command.commandType) {
-            case FORCE_REVALIDATE_GOAL_AND_PATH:
-                if (command.goal == null || forceRevalidate(command.goal) || revalidateGoal(command.goal)) {
-                    // pwnage
-                    p.softCancelIfSafe();
-                }
-                p.secretInternalSetGoalAndPath(command);
-                break;
-            case REVALIDATE_GOAL_AND_PATH:
-                if (Baritone.settings().cancelOnGoalInvalidation.value && (command.goal == null || revalidateGoal(command.goal))) {
-                    p.softCancelIfSafe();
-                }
-                p.secretInternalSetGoalAndPath(command);
-                break;
-            default:
+
+        PathingBehavior pathingBehavior = baritone.getPathingBehavior();
+
+        if (currentCommand.commandType == PathingCommandType.FORCE_REVALIDATE_GOAL_AND_PATH) {
+            handleForceRevalidation(pathingBehavior);
+        } else if (currentCommand.commandType == PathingCommandType.REVALIDATE_GOAL_AND_PATH) {
+            handleRevalidation(pathingBehavior);
         }
     }
 
-    public boolean forceRevalidate(Goal newGoal) {
-        PathExecutor current = baritone.getPathingBehavior().getCurrent();
-        if (current != null) {
-            if (newGoal.isInGoal(current.getPath().getDest())) {
+    private void handleForceRevalidation(PathingBehavior pathingBehavior) {
+        if (currentCommand.goal == null || requiresForceRevalidation(currentCommand.goal) || requiresGoalRevalidation(currentCommand.goal)) {
+            pathingBehavior.softCancelIfSafe();
+        }
+        pathingBehavior.secretInternalSetGoalAndPath(currentCommand);
+    }
+
+    private void handleRevalidation(PathingBehavior pathingBehavior) {
+        if (Baritone.settings().cancelOnGoalInvalidation.value &&
+                (currentCommand.goal == null || requiresGoalRevalidation(currentCommand.goal))) {
+            pathingBehavior.softCancelIfSafe();
+        }
+        pathingBehavior.secretInternalSetGoalAndPath(currentCommand);
+    }
+
+    public boolean requiresForceRevalidation(Goal newGoal) {
+        PathExecutor currentPath = baritone.getPathingBehavior().getCurrentPath();
+        if (currentPath != null) {
+            if (newGoal.isInGoal(currentPath.getPath().getDest())) {
                 return false;
             }
-            return !newGoal.equals(current.getPath().getGoal());
+            return !newGoal.equals(currentPath.getPath().getGoal());
         }
         return false;
     }
 
-    public boolean revalidateGoal(Goal newGoal) {
-        PathExecutor current = baritone.getPathingBehavior().getCurrent();
-        if (current != null) {
-            Goal intended = current.getPath().getGoal();
-            BlockPos end = current.getPath().getDest();
-            if (intended.isInGoal(end) && !newGoal.isInGoal(end)) {
-                // this path used to end in the goal
-                // but the goal has changed, so there's no reason to continue...
-                return true;
-            }
+    public boolean requiresGoalRevalidation(Goal newGoal) {
+        PathExecutor currentPath = baritone.getPathingBehavior().getCurrentPath();
+        if (currentPath != null) {
+            Goal intendedGoal = currentPath.getPath().getGoal();
+            BlockPos endPosition = currentPath.getPath().getDest();
+            return intendedGoal.isInGoal(endPosition) && !newGoal.isInGoal(endPosition);
         }
         return false;
     }
 
+    public PathingCommand executeProcessQueue() {
+        updateActiveProcessList();
+        sortProcessesByPriority();
 
-    public PathingCommand executeProcesses() {
-        for (IBaritoneProcess process : processes) {
-            if (process.isActive()) {
-                if (!active.contains(process)) {
-                    // put a newly active process at the very front of the queue
-                    active.add(0, process);
+        for (Iterator<IBaritoneProcess> iterator = activeProcesses.iterator(); iterator.hasNext();) {
+            IBaritoneProcess process = iterator.next();
+            boolean wasInControlLastTick = Objects.equals(process, previousControllingProcess);
+            boolean pathCalculationFailedLastTick = baritone.getPathingBehavior().calcFailedLastTick();
+            boolean isSafeToCancelCurrentPath = baritone.getPathingBehavior().isSafeToCancel();
+
+            PathingCommand command = process.onTick(wasInControlLastTick && pathCalculationFailedLastTick, isSafeToCancelCurrentPath);
+
+            if (command == null) {
+                if (process.isActive()) {
+                    throw new IllegalStateException(process.displayName() + " actively returned null PathingCommand");
                 }
-            } else {
-                active.remove(process);
-            }
-        }
-        // ties are broken by which was added to the beginning of the list first
-        active.sort(Comparator.comparingDouble(IBaritoneProcess::priority).reversed());
-
-        Iterator<IBaritoneProcess> iterator = active.iterator();
-        while (iterator.hasNext()) {
-            IBaritoneProcess proc = iterator.next();
-
-            PathingCommand exec = proc.onTick(Objects.equals(proc, inControlLastTick) && baritone.getPathingBehavior().calcFailedLastTick(), baritone.getPathingBehavior().isSafeToCancel());
-            if (exec == null) {
-                if (proc.isActive()) {
-                    throw new IllegalStateException(proc.displayName() + " actively returned null PathingCommand");
-                }
-                // no need to call onLostControl; they are reporting inactive.
-            } else if (exec.commandType != PathingCommandType.DEFER) {
-                inControlThisTick = proc;
-                if (!proc.isTemporary()) {
+            } else if (command.commandType != PathingCommandType.DEFER) {
+                currentControllingProcess = process;
+                if (!process.isTemporary()) {
                     iterator.forEachRemaining(IBaritoneProcess::release);
                 }
-                return exec;
+                return command;
             }
         }
         return null;
+    }
+
+    private void updateActiveProcessList() {
+        for (IBaritoneProcess process : registeredProcesses) {
+            if (process.isActive()) {
+                if (!activeProcesses.contains(process)) {
+                    activeProcesses.add(0, process);
+                }
+            } else {
+                activeProcesses.remove(process);
+            }
+        }
+    }
+
+    private void sortProcessesByPriority() {
+        activeProcesses.sort(Comparator.comparingDouble(IBaritoneProcess::priority).reversed());
     }
 }

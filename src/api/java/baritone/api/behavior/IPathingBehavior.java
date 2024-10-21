@@ -50,7 +50,7 @@ public interface IPathingBehavior extends IBehavior {
      * @return The estimated remaining ticks in the current segment.
      */
     default Optional<Double> ticksRemainingInSegment(boolean includeCurrentMovement) {
-        IPathExecutor current = getCurrent();
+        IPathExecutor current = getCurrentPath();
         if (current == null) {
             return Optional.empty();
         }
@@ -70,7 +70,7 @@ public interface IPathingBehavior extends IBehavior {
     /**
      * @return The current pathing goal
      */
-    Goal getGoal();
+    Goal getDestination();
 
     /**
      * @return Whether or not a path is currently being executed. This will be false if there's currently a pause.
@@ -84,7 +84,7 @@ public interface IPathingBehavior extends IBehavior {
      * @see #isPathing()
      */
     default boolean hasPath() {
-        return getCurrent() != null;
+        return getCurrentPath() != null;
     }
 
     /**
@@ -110,23 +110,23 @@ public interface IPathingBehavior extends IBehavior {
      * @return The current path
      */
     default Optional<IPath> getPath() {
-        return Optional.ofNullable(getCurrent()).map(IPathExecutor::getPath);
+        return Optional.ofNullable(getCurrentPath()).map(IPathExecutor::getPath);
     }
 
     /**
      * @return The current path finder being executed
      */
-    Optional<? extends IPathFinder> getInProgress();
+    Optional<? extends IPathFinder> getActivePathCalculation();
 
     /**
      * @return The current path executor
      */
-    IPathExecutor getCurrent();
+    IPathExecutor getCurrentPath();
 
     /**
      * Returns the next path executor, created when planning ahead.
      *
      * @return The next path executor
      */
-    IPathExecutor getNext();
+    IPathExecutor getNextPlannedPath();
 }

@@ -79,7 +79,7 @@ public final class PathRenderer implements IRenderer {
         }
 
         final float partialTicks = event.getPartialTicks();
-        final Goal goal = behavior.getGoal();
+        final Goal goal = behavior.getDestination();
 
         final DimensionType thisPlayerDimension = ctx.world().dimensionType();
         final DimensionType currentRenderViewDimension = BaritoneAPI.getProvider().getPrimaryBaritone().getPlayerContext().world().dimensionType();
@@ -97,8 +97,8 @@ public final class PathRenderer implements IRenderer {
             return;
         }
 
-        PathExecutor current = behavior.getCurrent(); // this should prevent most race conditions?
-        PathExecutor next = behavior.getNext(); // like, now it's not possible for current!=null to be true, then suddenly false because of another thread
+        PathExecutor current = behavior.getCurrentPath(); // this should prevent most race conditions?
+        PathExecutor next = behavior.getNextPlannedPath(); // like, now it's not possible for current!=null to be true, then suddenly false because of another thread
         if (current != null && settings.renderSelectionBoxes.value) {
             drawManySelectionBoxes(event.getModelViewStack(), ctx.player(), current.toBreak(), settings.colorBlocksToBreak.value);
             drawManySelectionBoxes(event.getModelViewStack(), ctx.player(), current.toPlace(), settings.colorBlocksToPlace.value);
@@ -118,7 +118,7 @@ public final class PathRenderer implements IRenderer {
         }
 
         // If there is a path calculation currently running, render the path calculation process
-        behavior.getInProgress().ifPresent(currentlyRunning -> {
+        behavior.getActivePathCalculation().ifPresent(currentlyRunning -> {
             currentlyRunning.bestPathSoFar().ifPresent(p -> {
                 drawPath(event.getModelViewStack(), p.positions(), 0, settings.colorBestPathSoFar.value, settings.fadePath.value, 10, 20);
             });

@@ -268,7 +268,7 @@ public class PathExecutor implements IPathExecutor, Helper {
     }
 
     private boolean shouldPause() {
-        Optional<AbstractNodeCostSearch> current = behavior.getInProgress();
+        Optional<AbstractNodeCostSearch> current = behavior.getActivePathCalculation();
         if (!current.isPresent()) {
             return false;
         }
