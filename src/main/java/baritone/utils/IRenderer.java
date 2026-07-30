@@ -28,9 +28,12 @@ import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.systems.RenderSystem;
 // import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -66,8 +69,9 @@ public interface IRenderer {
     RenderPipeline.Snippet BARITONE_BEACON_BEAM_SNIPPET = RenderPipeline.builder(((IRenderPipelines) new RenderPipelines()).getMatricesFogSnippet())
             .withVertexShader("core/rendertype_beacon_beam")
             .withFragmentShader("core/rendertype_beacon_beam")
-// .withSampler("Sampler0")
-            .withVertexFormat(DefaultVertexFormat.BLOCK, com.mojang.blaze3d.PrimitiveTopology.QUADS)
+            .withBindGroupLayout(BindGroupLayouts.SAMPLER0)
+            .withVertexBinding(0, DefaultVertexFormat.BLOCK)
+            .withPrimitiveTopology(com.mojang.blaze3d.PrimitiveTopology.QUADS)
             .buildSnippet();
 
     RenderPipeline BEACON_BEAM_OPAQUE = ((IRenderPipelines) new RenderPipelines()).baritone$registerPipeline(RenderPipeline.builder(BARITONE_BEACON_BEAM_SNIPPET)
@@ -133,11 +137,7 @@ public interface IRenderer {
     static void endLines(BufferBuilder bufferBuilder, boolean ignoredDepth) {
         MeshData meshData = bufferBuilder.build();
         if (meshData != null) {
-            if (ignoredDepth) {
-                linesNoDepthRenderType.draw(meshData);
-            } else {
-                linesWithDepthRenderType.draw(meshData);
-            }
+            draw(meshData, ignoredDepth ? linesNoDepthRenderType : linesWithDepthRenderType);
         }
     }
 
@@ -148,7 +148,15 @@ public interface IRenderer {
     static void endBuffer(BufferBuilder bufferBuilder, RenderType renderType) {
         MeshData meshData = bufferBuilder.build();
         if (meshData != null) {
-            renderType.draw(meshData);
+            draw(meshData, renderType);
+        }
+    }
+
+    private static void draw(MeshData meshData, RenderType renderType) {
+        try (meshData; GpuBuffer vertexBuffer = RenderSystem.getDevice().createBuffer(() -> "Baritone immediate vertex buffer", GpuBuffer.USAGE_VERTEX, meshData.vertexBuffer())) {
+            MeshData.DrawState drawState = meshData.drawState();
+            RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(drawState.primitiveTopology());
+            renderType.prepare().drawFromBuffer(vertexBuffer, indices.getBuffer(drawState.indexCount()), indices.type(), 0, 0, drawState.indexCount());
         }
     }
 

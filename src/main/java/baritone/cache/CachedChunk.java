@@ -40,7 +40,8 @@ import java.util.Map;
  */
 public final class CachedChunk {
 
-    public static final ImmutableSet<Block> BLOCKS_TO_KEEP_TRACK_OF = ImmutableSet.of(
+    public static final ImmutableSet<Block> BLOCKS_TO_KEEP_TRACK_OF = ImmutableSet.<Block>builder()
+            .add(
             Blocks.ENDER_CHEST,
             Blocks.FURNACE,
             Blocks.CHEST,
@@ -49,23 +50,10 @@ public final class CachedChunk {
             Blocks.END_PORTAL_FRAME,
             Blocks.SPAWNER,
             Blocks.BARRIER,
-            Blocks.OBSERVER,
-            Blocks.WHITE_SHULKER_BOX,
-            Blocks.ORANGE_SHULKER_BOX,
-            Blocks.MAGENTA_SHULKER_BOX,
-            Blocks.LIGHT_BLUE_SHULKER_BOX,
-            Blocks.YELLOW_SHULKER_BOX,
-            Blocks.LIME_SHULKER_BOX,
-            Blocks.PINK_SHULKER_BOX,
-            Blocks.GRAY_SHULKER_BOX,
-            Blocks.LIGHT_GRAY_SHULKER_BOX,
-            Blocks.CYAN_SHULKER_BOX,
-            Blocks.PURPLE_SHULKER_BOX,
-            Blocks.BLUE_SHULKER_BOX,
-            Blocks.BROWN_SHULKER_BOX,
-            Blocks.GREEN_SHULKER_BOX,
-            Blocks.RED_SHULKER_BOX,
-            Blocks.BLACK_SHULKER_BOX,
+            Blocks.OBSERVER
+            )
+            .addAll(Blocks.DYED_SHULKER_BOX.asList())
+            .add(
             Blocks.NETHER_PORTAL,
             Blocks.HOPPER,
             Blocks.BEACON,
@@ -86,23 +74,10 @@ public final class CachedChunk {
             Blocks.WITHER_SKELETON_SKULL,
             Blocks.WITHER_SKELETON_WALL_SKULL,
             Blocks.ENCHANTING_TABLE,
-            Blocks.ANVIL,
-            Blocks.WHITE_BED,
-            Blocks.ORANGE_BED,
-            Blocks.MAGENTA_BED,
-            Blocks.LIGHT_BLUE_BED,
-            Blocks.YELLOW_BED,
-            Blocks.LIME_BED,
-            Blocks.PINK_BED,
-            Blocks.GRAY_BED,
-            Blocks.LIGHT_GRAY_BED,
-            Blocks.CYAN_BED,
-            Blocks.PURPLE_BED,
-            Blocks.BLUE_BED,
-            Blocks.BROWN_BED,
-            Blocks.GREEN_BED,
-            Blocks.RED_BED,
-            Blocks.BLACK_BED,
+            Blocks.ANVIL
+            )
+            .addAll(Blocks.BED.asList())
+            .add(
             Blocks.DRAGON_EGG,
             Blocks.JUKEBOX,
             Blocks.END_GATEWAY,
@@ -110,7 +85,8 @@ public final class CachedChunk {
             Blocks.NETHER_WART,
             Blocks.LADDER,
             Blocks.VINE
-    );
+            )
+            .build();
 
     public final int height;
 

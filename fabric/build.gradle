@@ -79,7 +79,7 @@ components.java {
     }
 }
 
-task proguard(type: ProguardTask) {
+task proguard(type: ProguardTask, dependsOn: remapJar) {
     proguardVersion "7.8.2"
     compType "fabric"
 }
