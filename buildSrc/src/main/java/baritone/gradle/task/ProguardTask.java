@@ -18,7 +18,7 @@
 package baritone.gradle.task;
 
 import baritone.gradle.util.Determinizer;
-import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.process.ExecOperations;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.SourceSetContainer;
 import org.gradle.api.tasks.TaskAction;
@@ -42,12 +42,20 @@ import java.util.List;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javax.inject.Inject;
 
 /**
  * @author Brady
  * @since 10/11/2018
  */
 public class ProguardTask extends BaritoneGradleTask {
+
+    private final ExecOperations execOperations;
+
+    @Inject
+    public ProguardTask(ExecOperations execOperations) {
+        this.execOperations = execOperations;
+    }
 
     @Input
     private String proguardVersion;
@@ -175,7 +183,7 @@ public class ProguardTask extends BaritoneGradleTask {
     }
 
     private Stream<File> acquireDependencies() {
-        return getProject().getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().findByName("main").getCompileClasspath().getFiles()
+        return sourceSets.getByName("main").getCompileClasspath().getFiles()
                 .stream()
                 .filter(File::isFile);
     }
@@ -227,7 +235,7 @@ public class ProguardTask extends BaritoneGradleTask {
 
         Path workingDirectory = getTemporaryFile("");
 
-        getProject().javaexec(spec -> {
+        execOperations.javaexec(spec -> {
             spec.workingDir(workingDirectory.toFile());
             spec.args("@" + workingDirectory.relativize(config));
             spec.classpath(getTemporaryFile(String.format(PROGUARD_JAR, proguardVersion)));
