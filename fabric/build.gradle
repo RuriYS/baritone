@@ -15,9 +15,6 @@
  * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import baritone.gradle.task.CreateDistTask
-import baritone.gradle.task.ProguardTask
-
 plugins {
     id "com.gradleup.shadow" version "9.6.1"
 }
@@ -79,29 +76,18 @@ components.java {
     }
 }
 
-task proguard(type: ProguardTask, dependsOn: remapJar) {
-    proguardVersion "7.8.2"
-    compType "fabric"
-}
-
-task createDist(type: CreateDistTask, dependsOn: proguard) {
-    compType "fabric"
-}
-
 task sourcesJar(type: Jar, dependsOn: classes) {
     from rootProject.sourceSets.main.allJava
     from rootProject.sourceSets.api.allJava
     archiveClassifier.set("sources")
 }
 
-build.finalizedBy(createDist)
-
 publishing {
     publications {
         maven(MavenPublication) {
             groupId "meteordevelopment"
             artifactId "baritone"
-            artifact "../dist/baritone-api-fabric-" + version + ".jar"
+            artifact remapJar
             artifact sourcesJar
         }
     }

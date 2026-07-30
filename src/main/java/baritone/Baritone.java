@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -56,9 +57,14 @@ import java.util.function.Function;
 public class Baritone implements IBaritone {
 
     private static final ThreadPoolExecutor threadPool;
+    private static final ThreadFactory threadFactory = runnable -> {
+        Thread thread = new Thread(runnable, "Baritone");
+        thread.setDaemon(true);
+        return thread;
+    };
 
     static {
-        threadPool = new ThreadPoolExecutor(4, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>());
+        threadPool = new ThreadPoolExecutor(4, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS, new SynchronousQueue<>(), threadFactory);
     }
 
     private final Minecraft mc;
