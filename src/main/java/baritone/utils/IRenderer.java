@@ -27,8 +27,8 @@ import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
+// import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -47,14 +47,14 @@ import java.util.function.BiFunction;
 
 public interface IRenderer {
 
-    Tesselator tessellator = Tesselator.getInstance();
+    ThreadLocal<com.mojang.blaze3d.vertex.ByteBufferBuilder> tessellator = ThreadLocal.withInitial(() -> new com.mojang.blaze3d.vertex.ByteBufferBuilder(1536));
     IEntityRenderManager renderManager = (IEntityRenderManager) Minecraft.getInstance().getEntityRenderDispatcher();
     Settings settings = BaritoneAPI.getSettings();
     BlendFunction BARITONE_LINES_BLEND = new BlendFunction(
-        SourceFactor.SRC_ALPHA,
-        DestFactor.ONE_MINUS_SRC_ALPHA,
-        SourceFactor.ONE,
-        DestFactor.ZERO
+        BlendFactor.SRC_ALPHA,
+        BlendFactor.ONE_MINUS_SRC_ALPHA,
+        BlendFactor.ONE,
+        BlendFactor.ZERO
     );
 
     RenderPipeline.Snippet BARITONE_LINES_SNIPPET = RenderPipeline.builder(((IRenderPipelines) new RenderPipelines()).getLinesSnippet())
@@ -66,8 +66,8 @@ public interface IRenderer {
     RenderPipeline.Snippet BARITONE_BEACON_BEAM_SNIPPET = RenderPipeline.builder(((IRenderPipelines) new RenderPipelines()).getMatricesFogSnippet())
             .withVertexShader("core/rendertype_beacon_beam")
             .withFragmentShader("core/rendertype_beacon_beam")
-            .withSampler("Sampler0")
-            .withVertexFormat(DefaultVertexFormat.BLOCK, VertexFormat.Mode.QUADS)
+// .withSampler("Sampler0")
+            .withVertexFormat(DefaultVertexFormat.BLOCK, com.mojang.blaze3d.PrimitiveTopology.QUADS)
             .buildSnippet();
 
     RenderPipeline BEACON_BEAM_OPAQUE = ((IRenderPipelines) new RenderPipelines()).baritone$registerPipeline(RenderPipeline.builder(BARITONE_BEACON_BEAM_SNIPPET)
@@ -90,7 +90,6 @@ public interface IRenderer {
             .withLocation("pipelines/baritone_lines_with_depth")
             .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
             .build())
-            .bufferSize(256)
             .createRenderSetup()
     );
     RenderType linesNoDepthRenderType = ((IRenderType) RenderTypes.lines()).createRenderType(
@@ -99,7 +98,6 @@ public interface IRenderer {
                 .withLocation("pipelines/baritone_lines_no_depth")
                 .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .build())
-            .bufferSize(256)
             .createRenderSetup()
     );
 
@@ -125,7 +123,7 @@ public interface IRenderer {
 
     static BufferBuilder startLines(Color color, float alpha) {
         glColor(color, alpha);
-        return tessellator.begin(VertexFormat.Mode.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
+        return new BufferBuilder(tessellator.get(), com.mojang.blaze3d.PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH);
     }
 
     static BufferBuilder startLines(Color color) {
@@ -144,7 +142,7 @@ public interface IRenderer {
     }
 
     static BufferBuilder startBlockQuads() {
-        return tessellator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.BLOCK);
+        return new BufferBuilder(tessellator.get(), com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.BLOCK);
     }
 
     static void endBuffer(BufferBuilder bufferBuilder, RenderType renderType) {
