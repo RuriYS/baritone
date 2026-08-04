@@ -65,6 +65,8 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     private boolean cancelRequested;
     private boolean calcFailedLastTick;
 
+    private final GuidePathing guide;
+
     private volatile AbstractNodeCostSearch inProgress;
     private final Object pathCalcLock = new Object();
 
@@ -78,9 +80,10 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     public PathingBehavior(Baritone baritone) {
         super(baritone);
+        guide = new GuidePathing(this);
     }
 
-    private void queuePathEvent(PathEvent event) {
+    void queuePathEvent(PathEvent event) {
         toDispatch.add(event);
     }
 
@@ -117,6 +120,12 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     }
 
     private void tickPath() {
+        if (guide.isActive()) {
+            pausedThisTick = false;
+            safeToCancel = true;
+            guide.tick();
+            return;
+        }
         pausedThisTick = false;
         if (pauseRequestedLastTick && safeToCancel) {
             pauseRequestedLastTick = false;
@@ -238,9 +247,27 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         }
     }
 
+    private void stopGuiding() {
+        if (!guide.isActive()) {
+            return;
+        }
+        guide.stop();
+        synchronized (pathPlanLock) {
+            current = null;
+            next = null;
+            synchronized (pathCalcLock) {
+                if (inProgress != null) {
+                    inProgress.cancel();
+                }
+            }
+            baritone.getInputOverrideHandler().clearAllKeys();
+            baritone.getInputOverrideHandler().getBlockBreakHelper().stopBreakingBlock();
+        }
+    }
+
     @Override
     public void onPlayerUpdate(PlayerUpdateEvent event) {
-        if (current != null) {
+        if (current != null && !guide.isActive()) {
             switch (event.getState()) {
                 case PRE:
                     lastAutoJump = ctx.minecraft().options.autoJump().get();
@@ -256,7 +283,27 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
     }
 
     public void secretInternalSetGoal(Goal goal) {
+        stopGuiding();
         this.goal = goal;
+    }
+
+    public boolean secretInternalGuide(PathingCommand command) {
+        synchronized (pathPlanLock) {
+            current = null;
+            next = null;
+            synchronized (pathCalcLock) {
+                if (inProgress != null) {
+                    inProgress.cancel();
+                }
+            }
+        }
+        baritone.getInputOverrideHandler().clearAllKeys();
+        baritone.getInputOverrideHandler().getBlockBreakHelper().stopBreakingBlock();
+        goal = command.goal;
+        context = command instanceof PathingCommandContext
+                ? ((PathingCommandContext) command).desiredCalcContext
+                : new CalculationContext(baritone, true);
+        return guide.start(goal, context);
     }
 
     public boolean secretInternalSetGoalAndPath(PathingCommand command) {
@@ -294,25 +341,33 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     @Override
     public boolean isPathing() {
-        return hasPath() && !pausedThisTick;
+        return hasPath() && !pausedThisTick && !guide.isActive();
+    }
+
+    @Override
+    public boolean isGuiding() {
+        return guide.isActive();
     }
 
     @Override
     public PathExecutor getCurrent() {
-        return current;
+        return guide.isActive() ? guide.getCurrent() : current;
     }
 
     @Override
     public PathExecutor getNext() {
-        return next;
+        return guide.isActive() ? guide.getNext() : next;
     }
 
     @Override
     public Optional<AbstractNodeCostSearch> getInProgress() {
-        return Optional.ofNullable(inProgress);
+        return guide.isActive() ? guide.getInProgress() : Optional.ofNullable(inProgress);
     }
 
     public boolean isSafeToCancel() {
+        if (guide.isActive()) {
+            return true;
+        }
         if (current == null) {
             return !baritone.getElytraProcess().isActive() || baritone.getElytraProcess().isSafeToCancel();
         }
@@ -360,6 +415,7 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
 
     // just cancel the current path
     public void secretInternalSegmentCancel() {
+        stopGuiding();
         queuePathEvent(PathEvent.CANCELED);
         synchronized (pathPlanLock) {
             getInProgress().ifPresent(AbstractNodeCostSearch::cancel);
@@ -557,9 +613,13 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
         });
     }
 
-    private AbstractNodeCostSearch createPathfinder(BlockPos start, Goal goal, IPath previous, CalculationContext context) {
+    AbstractNodeCostSearch createPathfinder(BlockPos start, Goal goal, IPath previous, CalculationContext context) {
+        return createPathfinder(start, goal, previous, context, true);
+    }
+
+    AbstractNodeCostSearch createPathfinder(BlockPos start, Goal goal, IPath previous, CalculationContext context, boolean simplifyGoal) {
         Goal transformed = goal;
-        if (Baritone.settings().simplifyUnloadedYCoord.value && goal instanceof IGoalRenderPos) {
+        if (simplifyGoal && Baritone.settings().simplifyUnloadedYCoord.value && goal instanceof IGoalRenderPos) {
             BlockPos pos = ((IGoalRenderPos) goal).getGoalPos();
             if (!context.bsi.worldContainsLoadedChunk(pos.getX(), pos.getZ())) {
                 transformed = new GoalXZ(pos.getX(), pos.getZ());

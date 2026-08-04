@@ -29,6 +29,11 @@ public enum PathingCommandType {
     SET_GOAL_AND_PATH,
 
     /**
+     * set the goal and maintain a rendered path without controlling the player.
+     */
+    GUIDE,
+
+    /**
      * Has no effect on the current goal or path, just requests a pause
      */
     REQUEST_PAUSE,

@@ -34,6 +34,11 @@ public interface ICustomGoalProcess extends IBaritoneProcess {
     void path();
 
     /**
+     * starts path calculation and passive guidance without controlling the player.
+     */
+    void guide();
+
+    /**
      * @return The current goal
      */
     Goal getGoal();

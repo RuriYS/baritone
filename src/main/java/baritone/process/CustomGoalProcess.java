@@ -66,12 +66,19 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
         }
         if (this.state == State.EXECUTING) {
             this.state = State.PATH_REQUESTED;
+        } else if (this.state == State.GUIDING) {
+            this.state = State.GUIDE_REQUESTED;
         }
     }
 
     @Override
     public void path() {
         this.state = State.PATH_REQUESTED;
+    }
+
+    @Override
+    public void guide() {
+        this.state = State.GUIDE_REQUESTED;
     }
 
     @Override
@@ -99,7 +106,11 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
                 PathingCommand ret = new PathingCommand(this.goal, PathingCommandType.FORCE_REVALIDATE_GOAL_AND_PATH);
                 this.state = State.EXECUTING;
                 return ret;
+            case GUIDE_REQUESTED:
+                this.state = State.GUIDING;
+                return new PathingCommand(this.goal, PathingCommandType.GUIDE);
             case EXECUTING:
+            case GUIDING:
                 if (calcFailed) {
                     onLostControl();
                     return new PathingCommand(this.goal, PathingCommandType.CANCEL_AND_SET_GOAL);
@@ -116,7 +127,7 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
                     }
                     return new PathingCommand(this.goal, PathingCommandType.CANCEL_AND_SET_GOAL);
                 }
-                return new PathingCommand(this.goal, PathingCommandType.SET_GOAL_AND_PATH);
+                return new PathingCommand(this.goal, this.state == State.GUIDING ? PathingCommandType.GUIDE : PathingCommandType.SET_GOAL_AND_PATH);
             default:
                 throw new IllegalStateException("Unexpected state " + this.state);
         }
@@ -137,6 +148,8 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
         NONE,
         GOAL_SET,
         PATH_REQUESTED,
-        EXECUTING
+        EXECUTING,
+        GUIDE_REQUESTED,
+        GUIDING
     }
 }

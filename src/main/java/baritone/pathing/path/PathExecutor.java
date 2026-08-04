@@ -267,6 +267,48 @@ public class PathExecutor implements IPathExecutor, Helper {
         return new Tuple<>(best, bestPos);
     }
 
+    /**
+     * advances passive guide progress to the nearest unvisited path position.
+     * this deliberately does not update any movement or input state.
+     */
+    public Tuple<Double, Integer> guideTick(double maxDistance) {
+        double best = Double.POSITIVE_INFINITY;
+        int bestIndex = pathPosition;
+        for (int i = Math.min(pathPosition, path.length() - 1); i < path.length(); i++) {
+            double distance = VecUtils.entityDistanceToCenter(ctx.player(), path.positions().get(i));
+            if (distance < best) {
+                best = distance;
+                bestIndex = i;
+            }
+        }
+        for (int i = Math.min(pathPosition, path.movements().size()); i < path.movements().size(); i++) {
+            for (BlockPos pos : ((Movement) path.movements().get(i)).getValidPositions()) {
+                double distance = VecUtils.entityDistanceToCenter(ctx.player(), pos);
+                if (distance < best) {
+                    best = distance;
+                    bestIndex = i;
+                }
+            }
+        }
+        if (best <= maxDistance) {
+            pathPosition = Math.max(pathPosition, bestIndex);
+        }
+        return new Tuple<>(best, bestIndex);
+    }
+
+    /**
+     * checks the next guide fragment against the current world without executing it.
+     */
+    public boolean guidePathValid(CalculationContext context, int lookahead) {
+        int end = (int) Math.min(path.movements().size(), (long) pathPosition + lookahead);
+        for (int i = pathPosition; i < end; i++) {
+            if (((Movement) path.movements().get(i)).recalculateCost(context) >= ActionCosts.COST_INF) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     private boolean shouldPause() {
         Optional<AbstractNodeCostSearch> current = behavior.getInProgress();
         if (!current.isPresent()) {

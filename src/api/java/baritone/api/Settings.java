@@ -697,6 +697,21 @@ public final class Settings {
     public final Setting<Boolean> renderPath = new Setting<>(true);
 
     /**
+     * distance in blocks the player may stray from a guide path before recovery is considered.
+     */
+    public final Setting<Double> guideRepathDistance = new Setting<>(3.0D);
+
+    /**
+     * number of consecutive ticks outside {@link #guideRepathDistance} before guide recovery starts.
+     */
+    public final Setting<Integer> guideRepathDelayTicks = new Setting<>(10);
+
+    /**
+     * number of path movements in one logical guide fragment.
+     */
+    public final Setting<Integer> guideFragmentLength = new Setting<>(32);
+
+    /**
      * Render the path as a line instead of a frickin thingy
      */
     public final Setting<Boolean> renderPathAsLine = new Setting<>(false);
