@@ -7,14 +7,10 @@ assignees: ''
 ---
 
 ## Describe your suggestion
-With as much detail as possible, describe what your suggestion would do for Baritone.
+Describe what the suggestion would do for Baritone.
 
 ## Settings
-If applicable, what settings/customizability should be offered to tweak the functionality of your suggestion.
+List any settings that should control it.
 
 ## Context
-Describe how your suggestion would improve Baritone, or the reason behind it being added.
-
-## Final checklist
-- [x] I know how to properly use check boxes 
-- [ ] I have not used any OwO's or UwU's in this issue.
+Explain why the change would be useful.

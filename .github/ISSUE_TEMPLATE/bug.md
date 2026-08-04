@@ -6,15 +6,15 @@ labels: bug
 assignees: ''
 ---
 
-## Some information
+## Environment
 Operating system:
 Java version:
 Minecraft version:
 Baritone version:
-Other mods (if used): 
+Other mods:
 
-## Exception, error or logs
-Please find your `latest.log` or `debug.log` in this folder and attach it to the issue
+## Logs
+Attach `latest.log` or `debug.log` from the Minecraft `logs` directory.
 
 Linux: `~/.minecraft/logs/`
 
@@ -22,14 +22,7 @@ Windows: `%appdata%/.minecraft/logs/`
 
 Mac: `/Library/Application\ Support/minecraft/logs/`
 
-## How to reproduce
-Add your steps to reproduce the issue/bug experienced here.
+## Reproduction steps
 
 ## Modified settings
-To get the modified settings run `#modified` in game
-
-## Final checklist
-- [x] I know how to properly use check boxes 
-- [ ] I have included the version of Minecraft I'm running, baritone's version and forge mods (if used).
-- [ ] I have included logs, exceptions and / or steps to reproduce the issue.
-- [ ] I have not used any OwO's or UwU's in this issue.
+Run `#modified` in game and include its output.

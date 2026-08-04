@@ -15,130 +15,41 @@
  * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-allprojects {
-    apply plugin: 'java'
-    apply plugin: "xyz.wagyourtail.unimined"
-    apply plugin: "maven-publish"
-
-    base {
-        archivesName = rootProject.archives_base_name
-    }
-
-    /*def vers = ""
-    try {
-        vers = 'git describe --always --tags --first-parent --dirty'.execute().text.trim()
-    } catch (Exception e) {
-        println "Version detection failed: " + e
-    }
-    if (!vers.startsWith("v")) {
-        println "using version number: " + rootProject.mod_version
-        version = rootProject.mod_version
-    } else {
-        version = vers.substring(1)
-        println "Detected version " + version
-    }*/
-
-    version = rootProject.mod_version
-    group = rootProject.maven_group
-
-    java {
-        sourceCompatibility = JavaVersion.toVersion(project.java_version)
-        targetCompatibility = sourceCompatibility
-
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(sourceCompatibility.majorVersion.toInteger()))
-        }
-    }
-
-    repositories {
-        maven {
-            url = "https://files.minecraftforge.net/maven/"
-        }
-        maven {
-            name = 'spongepowered-repo'
-            url = 'https://repo.spongepowered.org/repository/maven-public/'
-        }
-        maven {
-            name = 'fabric-maven'
-            url = 'https://maven.fabricmc.net/'
-        }
-        maven {
-            name = 'impactdevelopment-repo'
-            url = 'https://impactdevelopment.github.io/maven/'
-        }
-        maven {
-            name = "ldtteam"
-            url = "https://maven.parchmentmc.net/"
-        }
-        // for the newer version of launchwrapper
-        maven {
-            name = "multimc-maven"
-            url = "https://files.multimc.org/maven/"
-            metadataSources {
-                artifact()
-            }
-        }
-        mavenCentral()
-        maven {
-            name = 'babbaj-repo'
-            url = 'https://babbaj.github.io/maven/'
-        }
-    }
-
-    dependencies {
-        compileOnly "org.spongepowered:mixin:${project.mixin_version}"
-        compileOnly "org.ow2.asm:asm:${project.asm_version}"
-
-        implementation "dev.babbaj:nether-pathfinder:${project.nether_pathfinder_version}"
-
-        implementation 'com.google.code.findbugs:jsr305:3.0.2'
-    }
-
-    unimined.minecraft(sourceSets.main, true) {
-        version rootProject.minecraft_version
-
-        mappings {
-            mojmap()
-
-            devFallbackNamespace "official"
-        }
-    }
-
-    tasks.withType(JavaCompile).configureEach {
-        it.options.encoding = "UTF-8"
-
-        def targetVersion = project.java_version.toInteger()
-        if (JavaVersion.current().isJava9Compatible()) {
-            it.options.release = targetVersion
-        }
-    }
-}
-
-unimined.minecraft {
-    runs.off = true
-    defaultRemapJar = false
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.17.17'
+    id 'maven-publish'
 }
 
 base {
-    archivesName = "${archivesName.get()}-common"
+    archivesName = "${archives_base_name}-fabric"
+}
+
+version = mod_version
+group = maven_group
+
+java {
+    sourceCompatibility = JavaVersion.toVersion(java_version)
+    targetCompatibility = sourceCompatibility
+
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(sourceCompatibility.majorVersion.toInteger()))
+    }
+
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'babbaj-repo'
+        url = 'https://babbaj.github.io/maven/'
+    }
 }
 
 sourceSets {
-    api {
-        compileClasspath += main.compileClasspath
-        runtimeClasspath += main.runtimeClasspath
-    }
     main {
-        compileClasspath += api.output
-        runtimeClasspath += api.output
-    }
-    test {
-        compileClasspath += main.compileClasspath + main.runtimeClasspath + main.output
-        runtimeClasspath += main.compileClasspath + main.runtimeClasspath + main.output
-    }
-    launch {
-        compileClasspath += main.compileClasspath + main.runtimeClasspath + main.output
-        runtimeClasspath += main.compileClasspath + main.runtimeClasspath + main.output
+        java.srcDirs += ['src/api/java', 'src/launch/java']
+        resources.srcDir 'src/launch/resources'
     }
     schematica_api {
         compileClasspath += main.compileClasspath
@@ -151,17 +62,57 @@ sourceSets {
 }
 
 dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${fabric_version}"
+
+    implementation "dev.babbaj:nether-pathfinder:${nether_pathfinder_version}"
+    include "dev.babbaj:nether-pathfinder:${nether_pathfinder_version}"
+    implementation 'com.google.code.findbugs:jsr305:3.0.2'
+
     testImplementation 'junit:junit:4.13.2'
 }
 
-jar {
-    from sourceSets.main.output, sourceSets.launch.output, sourceSets.api.output
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = java_version.toInteger()
+}
+
+processResources {
+    inputs.property 'version', project.version
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version
+    }
 }
 
 javadoc {
-    options.addStringOption('Xwerror', '-quiet') // makes the build fail on travis when there is a javadoc error
+    options.addStringOption('Xwerror', '-quiet')
     options.linkSource true
-    options.encoding "UTF-8" // allow emoji in comments :^)
-    source = sourceSets.api.allJava
-    classpath += sourceSets.api.compileClasspath
+    options.encoding 'UTF-8'
+    source = fileTree('src/api/java')
+    classpath += sourceSets.main.compileClasspath
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'meteordevelopment'
+            artifactId 'baritone'
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            name = 'meteor-maven'
+            url = 'https://maven.meteordev.org/snapshots'
+            credentials {
+                username = System.getenv('MAVEN_METEOR_ALIAS')
+                password = System.getenv('MAVEN_METEOR_TOKEN')
+            }
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
 }
